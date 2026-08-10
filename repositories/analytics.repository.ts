@@ -27,10 +27,13 @@ export class AnalyticsRepository {
       startDate.setHours(0, 0, 0, 0);
     } else if (range === "7d") {
       startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
     } else if (range === "30d") {
       startDate.setDate(now.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0);
     } else if (range === "year") {
       startDate.setFullYear(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
     }
 
     // 1. Total Revenue in Range (Filtered by Valid Completed/Paid Orders)
@@ -113,12 +116,15 @@ export class AnalyticsRepository {
       pointsCount = 12; // 2-hour slots
     } else if (range === "7d") {
       startDate.setDate(now.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
       pointsCount = 7;
     } else if (range === "30d") {
       startDate.setDate(now.getDate() - 30);
+      startDate.setHours(0, 0, 0, 0);
       pointsCount = 30;
     } else if (range === "year") {
       startDate.setFullYear(now.getFullYear(), 0, 1);
+      startDate.setHours(0, 0, 0, 0);
       pointsCount = 12;
     }
 
@@ -135,6 +141,13 @@ export class AnalyticsRepository {
         )
       );
 
+    const formatDateKey = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     // Group into time buckets
     const bucketMap: Record<string, { label: string; revenue: number; ordersCount: number }> = {};
 
@@ -145,7 +158,7 @@ export class AnalyticsRepository {
 
       if (range === "30d" || range === "7d") {
         d.setDate(now.getDate() - i);
-        key = d.toISOString().split("T")[0];
+        key = formatDateKey(d);
         label = d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
       } else if (range === "year") {
         d.setMonth(now.getMonth() - i);
@@ -163,7 +176,7 @@ export class AnalyticsRepository {
       const d = new Date(row.createdAt);
       let key = "";
       if (range === "30d" || range === "7d") {
-        key = d.toISOString().split("T")[0];
+        key = formatDateKey(d);
       } else if (range === "year") {
         key = `${d.getFullYear()}-${d.getMonth() + 1}`;
       } else {
@@ -197,24 +210,28 @@ export class AnalyticsRepository {
       .orderBy(desc(orders.createdAt))
       .limit(limit);
 
-    // Attach customer names
-    const enriched = await Promise.all(
-      rows.map(async (o) => {
-        const cust = await db
-          .select({ firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
-          .from(customers)
-          .where(eq(customers.id, o.customerId))
-          .then((r) => r[0]);
+    if (rows.length === 0) return [];
 
-        return {
-          ...o,
-          customerName: cust ? `${cust.firstName} ${cust.lastName || ""}`.trim() : "Guest",
-          customerEmail: cust ? cust.email : "N/A",
-        };
-      })
-    );
+    const customerIds = Array.from(new Set(rows.map((r) => r.customerId).filter(Boolean)));
+    const customerMap = new Map<string, any>();
 
-    return enriched;
+    if (customerIds.length > 0) {
+      const custRows = await db
+        .select({ id: customers.id, firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
+        .from(customers)
+        .where(inArray(customers.id, customerIds));
+
+      custRows.forEach((c) => customerMap.set(c.id, c));
+    }
+
+    return rows.map((o) => {
+      const cust = customerMap.get(o.customerId);
+      return {
+        ...o,
+        customerName: cust ? `${cust.firstName} ${cust.lastName || ""}`.trim() : "Guest",
+        customerEmail: cust ? cust.email : "N/A",
+      };
+    });
   }
 
   /**
@@ -249,7 +266,7 @@ export class AnalyticsRepository {
       .innerJoin(orders, eq(orderItems.orderId, orders.id))
       .where(inArray(orders.status, VALID_REVENUE_STATUSES))
       .groupBy(orderItems.productName)
-      .orderBy(desc(sum(orderItems.quantity)))
+      .orderBy(desc(sql`sum(${orderItems.quantity})`))
       .limit(limit);
 
     return items.map((item) => ({

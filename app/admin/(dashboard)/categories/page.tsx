@@ -62,8 +62,8 @@ export default function AdminCategoriesPage() {
 
       if (json.success) {
         setCategories(json.data.items || []);
-        setTotal(json.data.total || 0);
-        setTotalPages(json.data.totalPages || 1);
+        setTotal(json.data.pagination?.total ?? json.data.total ?? 0);
+        setTotalPages(json.data.pagination?.totalPages ?? json.data.totalPages ?? 1);
       } else {
         toast.error("Failed to fetch categories");
       }

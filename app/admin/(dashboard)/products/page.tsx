@@ -80,8 +80,8 @@ export default function AdminProductsPage() {
 
       if (json.success) {
         setProducts(json.data.items || []);
-        setTotal(json.data.total || 0);
-        setTotalPages(json.data.totalPages || 1);
+        setTotal(json.data.pagination?.total ?? json.data.total ?? 0);
+        setTotalPages(json.data.pagination?.totalPages ?? json.data.totalPages ?? 1);
       } else {
         toast.error("Failed to fetch products");
       }
