@@ -1,0 +1,36 @@
+{
+  "name": "premika-backend",
+  "version": "1.0.0",
+  "description": "Standalone Node.js backend for Premika Ecommerce Platform",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.30.10",
+    "express": "^4.21.2",
+    "nodemailer": "^6.10.0",
+    "pdf-lib": "^1.17.1",
+    "postgres": "^3.4.5",
+    "razorpay": "^2.9.6",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.19",
+    "@types/nodemailer": "^6.4.17",
+    "drizzle-kit": "^0.20.18",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
