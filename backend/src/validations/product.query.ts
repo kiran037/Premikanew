@@ -12,8 +12,18 @@ export const getProductsQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
   sort: z
-    .enum(["featured", "price-low", "price-high", "name", "newest"])
+    .string()
     .optional()
+    .transform((val) => {
+      if (!val) return "featured" as const;
+      const normalized = val.toLowerCase().trim();
+      if (normalized === "price_asc" || normalized === "price-asc" || normalized === "price-low") return "price-low" as const;
+      if (normalized === "price_desc" || normalized === "price-desc" || normalized === "price-high") return "price-high" as const;
+      if (normalized === "title_asc" || normalized === "name_asc" || normalized === "name") return "name" as const;
+      if (normalized === "newest") return "newest" as const;
+      if (normalized === "featured") return "featured" as const;
+      return "featured" as const;
+    })
     .default("featured"),
   featured: z
     .union([z.string(), z.boolean()])

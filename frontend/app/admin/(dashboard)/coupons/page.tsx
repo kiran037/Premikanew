@@ -87,9 +87,11 @@ export default function AdminCouponsPage() {
       const json = await res.json();
 
       if (json.success) {
-        setCoupons(json.data.items || []);
-        setTotal(json.data.pagination.total || 0);
-        setTotalPages(json.data.pagination.totalPages || 1);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setCoupons(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
       } else {
         toast.error(json.message || "Failed to load coupons");
       }

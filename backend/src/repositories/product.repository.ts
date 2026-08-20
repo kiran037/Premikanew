@@ -110,6 +110,20 @@ export class ProductRepository {
         break;
     }
 
+    const stockPriority = sql`CASE 
+      WHEN EXISTS (
+        SELECT 1 FROM product_sizes 
+        WHERE product_sizes.product_id = ${products.id} 
+          AND product_sizes.is_available = true 
+          AND (product_sizes.stock IS NULL OR product_sizes.stock > 0)
+      ) THEN 0
+      WHEN NOT EXISTS (
+        SELECT 1 FROM product_sizes 
+        WHERE product_sizes.product_id = ${products.id}
+      ) AND ${products.stockStatus} != 'out_of_stock' THEN 0
+      ELSE 1 
+    END ASC`;
+
     const page = filters.page || 1;
     const limit = filters.limit || 20;
     const offset = (page - 1) * limit;
@@ -124,7 +138,7 @@ export class ProductRepository {
         .select()
         .from(products)
         .where(finalWhere)
-        .orderBy(orderBy)
+        .orderBy(stockPriority, orderBy)
         .limit(limit)
         .offset(offset),
     ]);

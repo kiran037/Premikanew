@@ -41,11 +41,29 @@ export async function apiFetch(
     headers["Content-Type"] = "application/json";
   }
 
+  const timeoutMs = 15000; // 15s request timeout safety
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const callerSignal = options.signal;
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      controller.abort();
+    } else {
+      callerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+  }
+
   const fetchOptions: RequestInit = {
     ...options,
     headers,
     credentials: options.credentials || "include", // Required for admin session cookie sending/receiving
+    signal: controller.signal,
   };
 
-  return fetch(url, fetchOptions);
+  try {
+    return await fetch(url, fetchOptions);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

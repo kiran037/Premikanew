@@ -22,6 +22,15 @@ const nextConfig = {
     ],
   },
   async headers() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const connectOrigins = ["'self'", "https:", "wss:"];
+    if (apiUrl && !connectOrigins.includes(apiUrl)) {
+      connectOrigins.push(apiUrl);
+    }
+    if (process.env.NODE_ENV !== "production" && !connectOrigins.includes("http://localhost:5001")) {
+      connectOrigins.push("http://localhost:5001");
+    }
+
     return [
       {
         source: "/:path*",
@@ -34,7 +43,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https: wss:",
+              `connect-src ${connectOrigins.join(" ")}`,
               "frame-src 'self' https://*.razorpay.com",
               "object-src 'none'",
               "base-uri 'self'",

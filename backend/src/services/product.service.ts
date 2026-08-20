@@ -37,15 +37,28 @@ export class ProductService {
       comment: r.comment,
     }));
 
+    const hasAvailableSizes =
+      item.sizes.length > 0
+        ? item.sizes.some(
+            (s) => s.isAvailable === true && (s.stock === null || s.stock === undefined || s.stock > 0)
+          )
+        : p.stockStatus !== "out_of_stock";
+
+    const inStock = hasAvailableSizes;
+
+    const originalPrice =
+      p.compareAtPrice && p.compareAtPrice > p.price ? p.compareAtPrice : undefined;
+
     return {
       id: p.slug || p.id,
       name: p.name,
       price: p.price,
+      originalPrice,
       shortDescription: p.shortDescription || "",
       longDescription: p.longDescription || "",
       images: formattedImages,
       category: item.category?.slug || item.category?.name?.toLowerCase() || "clothing",
-      inStock: p.stockStatus === "in_stock",
+      inStock,
       sizes: formattedSizes,
       heights: formattedHeights.length > 0 ? formattedHeights : undefined,
       reviews: formattedReviews,

@@ -35,17 +35,24 @@ export class CategoryRepository {
    * Find category by slug or id
    */
   static async findCategoryBySlug(slugOrId: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+
     const categoryRecord = await db
       .select()
       .from(categories)
       .where(
         and(
           eq(categories.isActive, true),
-          or(
-            eq(categories.slug, slugOrId),
-            ilike(categories.name, slugOrId),
-            eq(categories.id, slugOrId)
-          )
+          isUuid
+            ? or(
+                eq(categories.slug, slugOrId),
+                ilike(categories.name, slugOrId),
+                eq(categories.id, slugOrId)
+              )
+            : or(
+                eq(categories.slug, slugOrId),
+                ilike(categories.name, slugOrId)
+              )
         )
       )
       .then((rows) => rows[0] || null);

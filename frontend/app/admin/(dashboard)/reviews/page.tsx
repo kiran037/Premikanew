@@ -108,7 +108,7 @@ export default function AdminReviewsPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchReviews = useCallback(async () => {
+  const fetchReviews = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -122,27 +122,33 @@ export default function AdminReviewsPage() {
       if (productFilter !== "all") params.set("productId", productFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await apiFetch(`/api/admin/reviews?${params.toString()}`);
+      const res = await apiFetch(`/api/admin/reviews?${params.toString()}`, { signal });
       const json = await res.json();
 
       if (json.success) {
-        setReviews(json.data.items || []);
-        setTotal(json.data.pagination.total || 0);
-        setTotalPages(json.data.pagination.totalPages || 1);
-        if (json.data.stats) setStats(json.data.stats);
-        if (json.data.productsList) setProductsList(json.data.productsList);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setReviews(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
+        if (json.data?.stats) setStats(json.data.stats);
+        if (json.data?.productsList) setProductsList(json.data.productsList);
       } else {
-        toast.error("Failed to fetch reviews");
+        if (!signal?.aborted) toast.error("Failed to fetch reviews");
       }
-    } catch {
-      toast.error("Error loading reviews");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading reviews");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, [page, search, statusFilter, verifiedFilter, ratingFilter, productFilter, sortBy]);
 
   useEffect(() => {
-    fetchReviews();
+    const controller = new AbortController();
+    fetchReviews(controller.signal);
+    return () => controller.abort();
   }, [fetchReviews]);
 
   // Bulk Selection Handlers

@@ -17,7 +17,9 @@ const client =
   globalThis.postgresClient ??
   postgres(connectionString, {
     prepare: false,
-    max: process.env.NODE_ENV === "production" ? 10 : 5,
+    max: Number(
+      process.env.DB_POOL_MAX || (process.env.NODE_ENV === "production" ? 10 : 15)
+    ),
     idle_timeout: 15,
     connect_timeout: 15,
     max_lifetime: 0,

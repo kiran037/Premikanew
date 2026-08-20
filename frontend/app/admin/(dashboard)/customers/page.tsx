@@ -35,7 +35,7 @@ export default function AdminCustomersPage() {
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("spend_desc");
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -45,25 +45,31 @@ export default function AdminCustomersPage() {
       if (segmentFilter !== "all") params.set("segment", segmentFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await apiFetch(`/api/admin/customers?${params.toString()}`);
+      const res = await apiFetch(`/api/admin/customers?${params.toString()}`, { signal });
       const json = await res.json();
 
       if (json.success) {
-        setCustomers(json.data.items || []);
-        setTotal(json.data.total || 0);
-        setTotalPages(json.data.totalPages || 1);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setCustomers(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
       } else {
-        toast.error("Failed to fetch customer records");
+        if (!signal?.aborted) toast.error("Failed to fetch customer records");
       }
-    } catch {
-      toast.error("Error loading customer records");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading customer records");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, [page, search, segmentFilter, sortBy]);
 
   useEffect(() => {
-    fetchCustomers();
+    const controller = new AbortController();
+    fetchCustomers(controller.signal);
+    return () => controller.abort();
   }, [fetchCustomers]);
 
   return (

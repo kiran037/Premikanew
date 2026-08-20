@@ -44,7 +44,7 @@ export default function AdminOrdersPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -56,25 +56,31 @@ export default function AdminOrdersPage() {
       if (rangeFilter !== "all") params.set("range", rangeFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await apiFetch(`/api/admin/orders?${params.toString()}`);
+      const res = await apiFetch(`/api/admin/orders?${params.toString()}`, { signal });
       const json = await res.json();
 
       if (json.success) {
-        setOrders(json.data.items || []);
-        setTotal(json.data.total || 0);
-        setTotalPages(json.data.totalPages || 1);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setOrders(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
       } else {
-        toast.error("Failed to fetch orders");
+        if (!signal?.aborted) toast.error("Failed to fetch orders");
       }
-    } catch {
-      toast.error("Error loading orders");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading orders");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, [page, search, orderStatusFilter, paymentStatusFilter, rangeFilter, sortBy]);
 
   useEffect(() => {
-    fetchOrders();
+    const controller = new AbortController();
+    fetchOrders(controller.signal);
+    return () => controller.abort();
   }, [fetchOrders]);
 
   const handleBulkStatus = async (status: string) => {

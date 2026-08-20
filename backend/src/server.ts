@@ -2,9 +2,11 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path";
 
 import storefrontRoutes from "@/routes/storefront.routes";
 import adminRoutes from "@/routes/admin.routes";
+import customerRoutes from "@/routes/customer.routes";
 import { errorHandler } from "@/middleware/errorHandler.middleware";
 import { db } from "@/db/client";
 import { sql } from "drizzle-orm";
@@ -55,21 +57,28 @@ app.get("/health", async (req, res) => {
   });
 });
 
+// Static Assets (Product & Category Images)
+const publicDir = path.resolve(__dirname, "../../frontend/public");
+app.use(express.static(publicDir));
+
 // API Routes
 app.use("/api/admin", adminRoutes);
+app.use("/api/customer", customerRoutes);
 app.use("/api", storefrontRoutes);
 
 // Error Handler
 app.use(errorHandler);
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(` Premika Standalone Backend Running`);
-  console.log(` Port:        http://localhost:${PORT}`);
-  console.log(` Health:      http://localhost:${PORT}/health`);
-  console.log(` Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`==================================================`);
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(` Premika Standalone Backend Running`);
+    console.log(` Port:        http://localhost:${PORT}`);
+    console.log(` Health:      http://localhost:${PORT}/health`);
+    console.log(` Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`==================================================`);
+  });
+}
 
 export default app;

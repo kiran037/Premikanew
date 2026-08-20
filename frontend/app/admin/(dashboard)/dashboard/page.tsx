@@ -38,42 +38,50 @@ export default function AdminDashboardPage() {
   const [widgetsData, setWidgetsData] = useState<any | null>(null);
 
   useEffect(() => {
-    fetchStats(range);
+    const controller = new AbortController();
+    fetchStats(range, controller.signal);
+    return () => controller.abort();
   }, [range]);
 
   useEffect(() => {
-    fetchWidgets();
+    const controller = new AbortController();
+    fetchWidgets(controller.signal);
+    return () => controller.abort();
   }, []);
 
-  const fetchStats = async (selectedRange: DateRange) => {
+  const fetchStats = async (selectedRange: DateRange, signal?: AbortSignal) => {
     setIsLoadingStats(true);
     try {
-      const res = await apiFetch(`/api/admin/dashboard/stats?range=${selectedRange}`);
+      const res = await apiFetch(`/api/admin/dashboard/stats?range=${selectedRange}`, { signal });
       const json = await res.json();
       if (json.success) {
         setStatsData(json.data);
       } else {
-        toast.error("Failed to load statistics");
+        if (!signal?.aborted) toast.error("Failed to load statistics");
       }
-    } catch {
-      toast.error("Error loading dashboard metrics");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading dashboard metrics");
+      }
     } finally {
-      setIsLoadingStats(false);
+      if (!signal?.aborted) setIsLoadingStats(false);
     }
   };
 
-  const fetchWidgets = async () => {
+  const fetchWidgets = async (signal?: AbortSignal) => {
     setIsLoadingWidgets(true);
     try {
-      const res = await apiFetch("/api/admin/dashboard/widgets");
+      const res = await apiFetch("/api/admin/dashboard/widgets", { signal });
       const json = await res.json();
       if (json.success) {
         setWidgetsData(json.data);
       }
-    } catch {
-      console.error("Error loading widgets");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        console.error("Error loading widgets");
+      }
     } finally {
-      setIsLoadingWidgets(false);
+      if (!signal?.aborted) setIsLoadingWidgets(false);
     }
   };
 

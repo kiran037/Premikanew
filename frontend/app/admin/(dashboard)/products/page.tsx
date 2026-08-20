@@ -53,17 +53,19 @@ export default function AdminProductsPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (signal?: AbortSignal) => {
     try {
-      const res = await apiFetch("/api/categories");
+      const res = await apiFetch("/api/categories", { signal });
       const json = await res.json();
       if (json.success) setCategories(json.data || []);
-    } catch {
-      console.error("Failed to load categories");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        console.error("Failed to load categories");
+      }
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -76,29 +78,37 @@ export default function AdminProductsPage() {
       if (newArrivalFilter !== "all") params.set("newArrival", newArrivalFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await apiFetch(`/api/admin/products?${params.toString()}`);
+      const res = await apiFetch(`/api/admin/products?${params.toString()}`, { signal });
       const json = await res.json();
 
       if (json.success) {
-        setProducts(json.data.items || []);
-        setTotal(json.data.pagination?.total ?? json.data.total ?? 0);
-        setTotalPages(json.data.pagination?.totalPages ?? json.data.totalPages ?? 1);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setProducts(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
       } else {
-        toast.error("Failed to fetch products");
+        if (!signal?.aborted) toast.error("Failed to fetch products");
       }
-    } catch {
-      toast.error("Error loading products");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading products");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    const controller = new AbortController();
+    fetchCategories(controller.signal);
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
-    fetchProducts();
+    const controller = new AbortController();
+    fetchProducts(controller.signal);
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, categoryId, isActiveFilter, featuredFilter, newArrivalFilter, sortBy]);
 

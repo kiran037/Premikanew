@@ -37,8 +37,7 @@ export default function AdminLoginPage() {
       }
 
       toast.success(`Welcome back, ${json.data.name || "Admin"}!`);
-      router.push("/admin/dashboard");
-      router.refresh();
+      window.location.href = "/admin/dashboard";
     } catch (err: any) {
       toast.error(err.message || "Failed to log in");
       setIsLoading(false);

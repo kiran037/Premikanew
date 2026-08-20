@@ -48,7 +48,7 @@ export default function AdminCategoriesPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -58,25 +58,31 @@ export default function AdminCategoriesPage() {
       if (isActiveFilter !== "all") params.set("isActive", isActiveFilter);
       if (sortBy) params.set("sortBy", sortBy);
 
-      const res = await apiFetch(`/api/admin/categories?${params.toString()}`);
+      const res = await apiFetch(`/api/admin/categories?${params.toString()}`, { signal });
       const json = await res.json();
 
       if (json.success) {
-        setCategories(json.data.items || []);
-        setTotal(json.data.pagination?.total ?? json.data.total ?? 0);
-        setTotalPages(json.data.pagination?.totalPages ?? json.data.totalPages ?? 1);
+        const items = Array.isArray(json.data) ? json.data : (json.data?.items || []);
+        const pagination = json.pagination || json.data?.pagination || {};
+        setCategories(items);
+        setTotal(pagination.total ?? json.data?.total ?? items.length);
+        setTotalPages(pagination.totalPages ?? json.data?.totalPages ?? 1);
       } else {
-        toast.error("Failed to fetch categories");
+        if (!signal?.aborted) toast.error("Failed to fetch categories");
       }
-    } catch {
-      toast.error("Error loading categories");
+    } catch (err: any) {
+      if (!signal?.aborted && err.name !== "AbortError") {
+        toast.error("Error loading categories");
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, [page, search, isActiveFilter, sortBy]);
 
   useEffect(() => {
-    fetchCategories();
+    const controller = new AbortController();
+    fetchCategories(controller.signal);
+    return () => controller.abort();
   }, [fetchCategories]);
 
   const handleToggleStatus = async (id: string) => {
