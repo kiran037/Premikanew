@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Premika",
+    "slug": "premika-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logos/logo.png",
+    "scheme": "premika",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/logos/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FDFBF9"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "shop.premika.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Premika uses camera access for updating profile photos.",
+        "NSPhotoLibraryUsageDescription": "Premika uses photo library access for choosing profile photos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logos/logo.png",
+        "backgroundColor": "#FDFBF9"
+      },
+      "package": "shop.premika.mobile"
+    },
+    "web": {
+      "favicon": "./assets/logos/logo.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
